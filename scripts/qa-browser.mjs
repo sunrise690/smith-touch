@@ -67,7 +67,7 @@ try {
     await page.locator('[data-preset="lmatch"]').click();
     await page.evaluate(() => scrollTo(0,0));
     await page.locator('#toast').evaluate((node) => node.classList.remove('visible'));
-    await page.screenshot({ path: `test-results/${viewport.width}-workspace.png`, fullPage: true });
+    await page.screenshot({ path: `test-results/${viewport.width}-workspace.png`, fullPage: true, animations: 'disabled' });
     if (viewport.width === 390) {
       await page.getByRole('button', { name: '精确设置电容 C', exact: true }).click();
       await page.screenshot({ path: 'test-results/390-keypad.png' });
@@ -102,6 +102,23 @@ try {
   await page.locator('#file-input').setInputFiles({ name: 'dc.s1p', mimeType: 'text/plain', buffer: Buffer.from(dc) });
   await page.waitForFunction(() => document.querySelector('#project-title').textContent === 'dc.s1p');
   assert.match(await page.locator('#toast').innerText(), /DC/);
+  const smc = '[DATAPOINTS]\nNR=1\nSTART=1\nR=0,50\nX=0,0\nF=0,100000000\n[Z0]\nZ0=50\n[ELEMENTS]\nNR=1\nTYP=0,IS\nVAL=0,1E-8\n';
+  await page.locator('#file-input').setInputFiles({ name: 'independent.smc', mimeType: 'text/plain', buffer: Buffer.from(smc) });
+  await page.waitForFunction(() => document.querySelector('#project-title').textContent === 'independent');
+  assert.match(await page.locator('#network-count').innerText(), /1 个元件/);
+  assert.match(await page.locator('.network-result strong').innerText(), /50 \+ j6.28/);
+  if (!['127.0.0.1', 'localhost'].includes(new URL(base).hostname)) {
+    await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+    await page.reload();
+    await page.waitForSelector('#smith-chart svg .point-group');
+    await context.setOffline(true);
+    await page.reload();
+    await page.waitForSelector('#smith-chart svg .point-group');
+    await page.locator('[data-preset="quarter"]').click();
+    await page.waitForFunction(() => document.querySelector('.network-result small').textContent === 'VSWR 1 : 1');
+    await context.setOffline(false);
+    results.push({ offline: 'Service worker reload and matching calculation passed' });
+  }
   await context.close();
   results.push({ files: 'Touchstone S11 load + line reference + SVG download + active/open edit guards + DC import passed' });
   await writeFile('test-results/browser-qa.json', JSON.stringify(results, null, 2));

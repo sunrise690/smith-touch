@@ -57,6 +57,8 @@ node scripts/serve.js
 node --test
 ```
 
+本次交付的 40 项计算测试、五种视口的触摸与数字盘检查，以及线上离线缓存检查均已通过，详见 [验证记录](docs/verification.md)。
+
 生成静态发布目录：
 
 ```sh
