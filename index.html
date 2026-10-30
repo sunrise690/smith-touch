@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#002FA7">
+  <meta name="description" content="在手机和平板上拖动 Smith 圆图，搭建阻抗匹配网络。内置数字盘，无需系统键盘。支持传输线、频率扫描、Touchstone 与 SMC 工程。">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Smith Touch · 触控匹配工作台</title>
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="./" aria-label="Smith Touch 首页"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17"/><circle cx="28.5" cy="20" r="8.5"/><path d="M3 20h34M20 3a17 17 0 0 0 17 17M20 37a17 17 0 0 1 17-17"/><circle cx="20" cy="20" r="2" fill="currentColor"/></svg><span>SMITH <strong>TOUCH</strong><small>触控匹配工作台</small></span></a>
+    <div class="header-actions"><button class="button quiet" id="help-button">使用说明</button><button class="button quiet" id="import-button">导入</button><button class="button primary" id="save-button">保存工程</button></div>
+  </header>
+
+  <main>
+    <section class="session-bar" aria-label="工程与全局设置">
+      <div class="session-name"><span class="eyebrow">阻抗匹配 / MATCHING</span><h1 id="project-title">新建匹配网络</h1></div>
+      <div class="global-settings"><button class="setting" data-edit="frequency"><span>工作频率</span><strong id="frequency-value">100 MHz</strong><span class="edit-word">调整</span></button><button class="setting" data-edit="z0"><span>参考阻抗 Z₀</span><strong id="z0-value">50 Ω</strong><span class="edit-word">调整</span></button></div>
+    </section>
+
+    <div class="workspace">
+      <section class="chart-panel" aria-label="Smith 圆图">
+        <div class="panel-head"><div><h2>Smith 圆图</h2><p>拖动圆图设置负载，点选节点查看阻抗</p></div><div class="chart-options"><button class="chip" id="admittance-toggle" aria-pressed="false">导纳网格</button><button class="chip active" id="vswr-toggle" aria-pressed="true">等驻波圆</button></div></div>
+        <p id="chart-data-warning" class="data-warning" role="status" hidden></p>
+        <div id="smith-chart" class="smith-chart"></div>
+        <div class="chart-legend"><span><i class="legend-load"></i>负载</span><span><i class="legend-path"></i>匹配轨迹</span><span><i class="legend-end"></i>输入端</span><span id="point-label" class="point-label">负载节点</span></div>
+        <div class="metrics" aria-live="off">
+          <div class="metric impedance"><span id="impedance-label">负载阻抗 Z</span><strong id="metric-z">25 + j25 <small>Ω</small></strong></div>
+          <div class="metric"><span>驻波比 VSWR</span><strong id="metric-vswr">2.62<small> : 1</small></strong></div>
+          <div class="metric"><span>回波损耗 RL</span><strong id="metric-rl">6.99<small> dB</small></strong></div>
+          <div class="metric"><span>反射系数 |Γ|</span><strong id="metric-gamma">0.447</strong></div>
+        </div>
+      </section>
+
+      <aside class="inspector" aria-label="参数调整">
+        <div class="inspector-title"><span class="eyebrow" id="selection-kicker">起点 / LOAD</span><h2 id="selection-title">负载阻抗</h2><p id="selection-hint">拖动蓝色负载点，或点按数值精确设置。</p></div>
+        <div id="parameter-controls"></div>
+        <div id="element-actions" class="element-actions" hidden><button class="button quiet" id="move-left">前移</button><button class="button quiet" id="move-right">后移</button><button class="button danger" id="remove-element">移除元件</button></div>
+        <div class="inspector-divider"></div>
+        <div class="minor-title"><h3>快速设置</h3><button class="text-button" id="reset-button">新建</button></div>
+        <div class="preset-grid"><button class="preset" data-preset="matched"><strong>匹配负载</strong><span>50 + j0 Ω</span></button><button class="preset" data-preset="reactive"><strong>感性负载</strong><span>25 + j25 Ω</span></button><button class="preset" data-preset="lmatch"><strong>L 型匹配示例</strong><span>100 MHz · 2 元件</span></button><button class="preset" data-preset="quarter"><strong>四分之一波长</strong><span>100 Ω → 50 Ω</span></button></div>
+        <button class="auto-match" id="match-button"><span>计算 L 型匹配</span><small>从当前输入端继续匹配至 Z₀</small><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
+        <p class="local-status" id="local-status">工程自动保存在此设备</p>
+      </aside>
+    </div>
+
+    <section class="network-panel" aria-label="匹配网络">
+      <div class="panel-head"><div><h2>匹配网络 <span class="count" id="network-count">0 个元件</span></h2><p>从负载到输入端依次变换；点击元件调整参数</p></div><div class="history-controls"><button class="icon-button" id="undo-button" aria-label="撤销" title="撤销"><svg viewBox="0 0 24 24"><path d="M9 5 4 10l5 5M4 10h10a6 6 0 0 1 0 12"/></svg></button><button class="icon-button" id="redo-button" aria-label="重做" title="重做"><svg viewBox="0 0 24 24"><path d="m15 5 5 5-5 5m5-5H10a6 6 0 0 0 0 12"/></svg></button></div></div>
+      <div id="network-chain" class="network-chain"></div>
+      <div class="component-tray"><span class="tray-label">添加元件</span><div class="component-groups"><div class="component-group"><span>串联</span><button data-add="seriesR">R</button><button data-add="seriesL">L</button><button data-add="seriesC">C</button></div><div class="component-group"><span>并联</span><button data-add="shuntR">R</button><button data-add="shuntL">L</button><button data-add="shuntC">C</button></div><div class="component-group line-group"><span>分布参数</span><button data-add="line">传输线</button><button data-add="openStub">开路支节</button><button data-add="shortStub">短路支节</button></div></div></div>
+    </section>
+
+    <section class="sweep-panel" aria-label="频率扫描">
+      <div class="panel-head"><div><h2>频率扫描</h2><p id="sweep-subtitle">固定负载 · 理想无损元件</p></div><button class="chip" id="sweep-toggle" aria-pressed="false">开启扫描</button></div>
+      <div id="sweep-content" hidden><div class="sweep-controls"><button class="setting small" data-edit="sweepStart"><span>起始</span><strong id="sweep-start-value">50 MHz</strong></button><span class="range-separator">—</span><button class="setting small" data-edit="sweepStop"><span>终止</span><strong id="sweep-stop-value">200 MHz</strong></button><span class="sweep-explanation">拖动频率滑条，圆图同步跟随</span></div><input id="frequency-slider" class="range-input" type="range" min="50" max="200" step="0.1" value="100" aria-label="扫描工作频率"><div id="sweep-plot" class="sweep-plot"></div><div class="sweep-footer"><span id="sweep-best"></span><button class="text-button" id="export-csv">导出扫描 CSV</button></div></div>
+    </section>
+    <footer class="app-footer"><span>理想元件模型 · 参数仅在本机处理</span><div><button class="text-button" id="export-svg">导出圆图 SVG</button><button class="text-button" id="share-button">复制工程链接</button><a href="https://github.com/sunrise690/smith-touch" target="_blank" rel="noopener noreferrer">GitHub</a></div></footer>
+  </main>
+
+  <input id="file-input" type="file" accept=".json,.s1p,.s2p,.smc,.SMC" hidden>
+  <dialog id="number-dialog" class="number-dialog" aria-labelledby="number-title"><form method="dialog" class="number-sheet"><div class="sheet-head"><div><span class="eyebrow">精确调整</span><h2 id="number-title">参数</h2></div><button type="button" class="icon-button close-keypad" aria-label="取消编辑"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></svg></button></div><div class="number-display"><output id="number-output">0</output><span id="number-unit">Ω</span></div><div class="number-step-row"><button type="button" data-key="÷10">÷10</button><button type="button" data-key="×10">×10</button><button type="button" data-key="clear">清空</button></div><div class="keypad"><button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button><button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button><button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button><button type="button" data-key="sign">±</button><button type="button" data-key="0">0</button><button type="button" data-key=".">.</button></div><div class="number-bottom"><button type="button" class="button quiet" data-key="backspace" aria-label="删除末位">退格</button><button type="button" class="button primary" id="apply-number">应用数值</button></div><p id="number-error" class="form-error" aria-live="polite"></p></form></dialog>
+
+  <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-title"><div class="help-content"><div class="sheet-head"><div><span class="eyebrow">SMITH TOUCH</span><h2 id="help-title">在指尖完成阻抗匹配</h2></div><button class="icon-button" id="close-help" aria-label="关闭说明"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></svg></button></div><ol class="help-steps"><li><strong>设置负载与频率</strong><p>在圆图空白处点按或拖动即可设置负载。所有数值按钮均使用内置数字盘，调整数字不会唤起系统键盘。</p></li><li><strong>搭建匹配网络</strong><p>添加串联、并联 R/L/C 或传输线。网络从负载向输入端依次计算。点选元件可用滑条、加减按钮或数字盘调整，也可旁路、移动和移除。</p></li><li><strong>查看扫描与保存</strong><p>开启扫描查看回波损耗，拖动频率滑条检查带宽。支持 Touchstone 1.0 的 .s1p/.s2p（取 S11）、原软件 .SMC 和本应用 .json 工程。工程自动保存在当前浏览器，也可下载或分享链接。</p></li></ol><div class="help-note"><h3>模型与兼容范围</h3><p>计算采用理想集中元件和无损传输线，传输线及支节的电长度以添加时频率为参考，扫频时随频率缩放。触摸区域限制为被动负载。导入文件只在本机读取。</p><p>这是依据可观察功能与公开射频公式独立编写的网页版；原版的增益圆、噪声圆、稳定圆、组合 RLC 和变压器尚未实现。不包含原软件代码、许可证或安装包。</p><p>Touchstone 文件通过复数线性插值获得频点，超出数据范围时使用端点。加入主屏幕后可在首次成功加载后离线使用。</p></div><div class="help-links"><a href="https://github.com/sunrise690/smith-touch" target="_blank" rel="noopener noreferrer">查看源码与反馈</a><span>Smith Touch 1.0</span></div></div></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
